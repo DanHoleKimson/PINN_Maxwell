@@ -1,5 +1,14 @@
-밑에 코드는 하이퍼파라미터 튜닝부분임
+맥스웰 방정식 eit를 푸는 것을 목표로 함
+problem setup
 
-맥스웰 방정식을 푸는 것을 목표로 하고 있음
+geometry is circle
 
-아직 못 풀었음
+sigma is 1
+
+PED
+u_xx + u_yy = 0
+
+Dirchlet boundary condition u_0 = 0 at (x,y) = (0, 0)
+
+Neumann boundart condition g
+g = (1/sqrt(2*pi))*cos(theta)
