@@ -1,5 +1,6 @@
-밑에 코드는 하이퍼파라미터 튜닝부분임
+solving maxwell's equation
+problem setup
+u_xx + u_yy = 0
+n*∇u = g in Ω
 
-맥스웰 방정식을 푸는 것을 목표로 하고 있음
-
-아직 못 풀었음
+using Dirichelt Boundary condition
