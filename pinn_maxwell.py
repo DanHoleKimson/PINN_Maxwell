@@ -1,99 +1,65 @@
 import deepxde as dde
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 
 R = 1
+num_dense_layers = 5
+num_dense_nodes = 150
+activation = "tanh"
 
-num_dense_layers = 9
-num_dense_nodes = 494
-lr = 0.009
+geom = dde.geometry.Disk([0, 0], R)
+
+center = np.array([0, 0])
+def func(x):
+    return np.zeros([len(x), 1])
 
 def pde(x, y):
     du_xx = dde.grad.hessian(y, x, i=0, j=0)
     du_yy = dde.grad.hessian(y, x, i=1, j=1)
-
     return du_xx + du_yy
 
-geom = dde.geometry.Disk([0, 0], R)
-
-def boundary(x, on_boundary):
-    return on_boundary
-
-def boundary_top(x, on_boundary):
-    return on_boundary and np.allclose(x, [0, 1])
 
 def boundary_bottom(x, on_boundary):
-    return on_boundary and np.allclose(x, [0. -1])
+    return on_boundary and (np.cos(9*np.pi/16) <= x[0] <= np.cos(7*np.pi/16)) and x[1] <= -np.sin(7*np.pi/16)
 
-def boundary_left_right(x, on_boundary):
-    return on_boundary and not np.allclose(x, [0, 1]) and not np.allclose(x, [0, -1])
+def boundary_top(x, on_boundary):
+    return on_boundary and (np.cos(9*np.pi/16) <= x[0] <= np.cos(7*np.pi/16)) and x[1] >= np.sin(7*np.pi/16)
 
-def boundary_center(x, on_boundary):
-    return on_boundary and np.allclose(x, [0, 0])
+def boundary_other1(x, on_boundary):
+    return on_boundary and ((np.cos(9*np.pi/16) >= x[0] >= -1) or (np.cos(7*np.pi/16) <= x[0] <= 1))
 
-def func(x):
-    
-    if np.allclose(x, [0, 1]):
-        normal = geom.boundary_normal(x)
-        normal = np.array([normal])
-        result = np.sum(normal)
-    elif np.allclose(x, [0, -1]):
-        normal = geom.boundary_normal(x)
-        normal = np.array([normal])
-        result = np.sum(normal)
-    else:
-        normal = geom.boundary_normal(x)
-        normal = np.array([normal])
-        result = np.sum(0 * normal)
-    return result
+#bc_c = dde.icbc.PointSetBC(center, func(center))
+bc_r = dde.icbc.DirichletBC(geom, lambda x : -1, boundary_bottom)
+bc_t = dde.icbc.DirichletBC(geom, lambda x : 1, boundary_top)
+bc_o1 = dde.icbc.NeumannBC(geom, lambda x : 0, boundary_other1)
 
-def func_t_b(x):
-    normal = geom.boundary_normal(x)
-    normal = np.array([normal])
-    normal = np.sum(normal)
-    return normal
-
-def func_r_l(x):
-    normal = geom.boundary_normal(x)
-    normal = np.array([normal])
-    normal = np.sum(0 * normal)
-    return normal
-
-
-
-
-
-bc_top = dde.icbc.NeumannBC(geom, func_t_b, boundary_top)
-bc_bottom = dde.icbc.NeumannBC(geom, func_t_b, boundary_bottom)
-bc_round = dde.icbc.NeumannBC(geom, func_r_l, boundary_left_right)
-
-ic = dde.icbc.PointSetBC([0, 0], 0)
-
-
-data = dde.data.PDE(geom, pde, [ic, bc_top, bc_bottom, bc_round], num_domain=6000, num_boundary=1000, num_test=3000)
+data = dde.data.PDE(
+    geom, pde, [bc_t, bc_r, bc_o1], num_domain=3000, num_boundary=150,
+)
 
 layer_size = [2] + [num_dense_nodes] * num_dense_layers + [1]
-activation = "sigmoid"
-net = dde.nn.FNN(layer_size, activation, "Glorot normal")
+net = dde.nn.pytorch.fnn.FNN(layer_size, activation,"Glorot uniform")
+
 model = dde.Model(data, net)
-
-model.compile("adam", lr=lr)
-losshistory, train_state = model.train(iterations=10000)
-
-dde.saveplot(losshistory, train_state, issave=False, isplot=True)
+model.compile("adam", lr=1e-3) 
+losshistory, train_state = model.train(iterations=15000)
+dde.saveplot(losshistory,train_state,issave=False,isplot=True)
 
 
+#ploting
+"""
 Nx = 500
 Ny = 500
 
 xmin, xmax, ymin, ymax = [-1, 1, -1, 1]
-plot_gird = np.mgrid[xmin : xmax : Nx * 1j, ymin : ymax : Ny * 1j]
+plot_grid = np.mgrid[xmin : xmax : Nx * 1j, ymin : ymax : Ny * 1j]
 points = np.vstack(
-    (plot_gird[0].ravel(), plot_gird[1].ravel(), np.zeros(plot_gird[0].size))
+    (plot_grid[0].ravel(), plot_grid[1].ravel(), np.zeros(plot_grid[0].size))
 )
 
-points_2d = points[:2,:]
-u = model.predict(points[:2,:].T)
+points_2d = points[:2, :]
+u = model.predict(points[:2, :].T)
 u = u.reshape((Nx, Ny))
 
 ide = np.sqrt(points_2d[0, :]**2 + points_2d[1,:]**2) > R
@@ -119,3 +85,5 @@ fig.colorbar(pcm, ax=ax1)
 ax1.set_title("PINNs")
 
 plt.savefig("plot_manufactured.pdf")
+
+"""
