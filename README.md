@@ -12,3 +12,5 @@ Dirchlet boundary condition u_0 = 0 at (x,y) = (0, 0)
 
 Neumann boundart condition g
 g = (1/sqrt(2*pi))*cos(theta)
+
+$\nabla\cdot (\sigma(x) \nabla u(x) ) = \nabla\sigma \cdot \nabla u + \sigma\Delta u$
